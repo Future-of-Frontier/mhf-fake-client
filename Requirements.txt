@@ -1,3 +1,4 @@
 requests
 construct
 beautifulsoup4
+hexdump
