@@ -54,18 +54,18 @@ SignInResp = EmbeddedSwitch(
             "unk_hostname_count" / Byte,
             "entrance_server_count" / Byte,
             "character_count" / Byte,
-            "unk_0" / Int32ul,
+            "unk_0" / Int32ub,
             "str_id" / PaddedString(16, "utf8"),
             # "unk_3B74" / If(False, PascalString(Byte, "utf8")), # Unknown condition.
-            "unk_3AE8" / Int32ul,
+            "unk_3AE8" / Int32ub,
             "unk_hostnames" / Array(this.unk_hostname_count, PascalString(Byte, "utf8")),
             "entrance_servers" / Array(this.entrance_server_count, PascalString(Byte, "utf8")),
             "characters" / Array(this.character_count,
                 Struct(
-                    "unk_0" / Int32ul,
-                    "unk_1" / Int16ul,
-                    "unk_2" / Int16ul,
-                    "unk_3" / Int32ul,
+                    "unk_0" / Int32ub,
+                    "unk_1" / Int16ub,
+                    "unk_2" / Int16ub,
+                    "unk_3" / Int32ub,
                     "unk_4" / Byte,
                     "unk_5" / Byte,
                     "unk_6" / Byte,
@@ -73,42 +73,90 @@ SignInResp = EmbeddedSwitch(
                     "unk_8" / PaddedString(16, "utf8"),
                     "unk_9" / PaddedString(32, "utf8"),
                     "unk_10" / If(this.unk_7 > 0, Struct(
-                        "unk_0" / Int16ul,
+                        "unk_0" / Int16ub,
                         "unk_1" / Byte,
                         "unk_2" / Byte,
                         )
                     ),
                 )
             ),
-            "unk_count_0" / Byte,
-            "unk_count_extended_0" / If(this.unk_count_0 == 255, Int16ul),
-            "unk_objs_0" / Array(this.unk_count_0 if this.unk_count_0 < 255 else this.unk_count_extended_0,
+            "friends_list_count" / Byte,
+            "unk_count_extended_0" / If(this.friends_list_count == 255, Int16ub),
+            "friends_list" / Array(this.friends_list_count if this.friends_list_count < 255 else this.unk_count_extended_0,
                 Struct(
-                    "unk_0" / Int32ul,
-                    "unk_1" / Int32ul,
+                    "unk_0" / Int32ub,
+                    "unk_1" / Int32ub,
+                    "player_name" / PascalString(Byte, "ansi")
+                )
+            ),
+            "guild_members_count" / Byte,
+            "guild_members_count_extended" / If(this.guild_members_count == 255, Int16ub),
+            "guild_members" / Array(this.guild_members_count if this.guild_members_count < 255 else this.guild_members_count_extended,
+                Struct(
+                    "unk_0" / Int32ub,
+                    "unk_1" / Int32ub,
+                    "player_name" / PascalString(Byte, "ansi")
+                )
+            ),
+            "notice_count" / Byte,
+            "notices" / Array(this.notice_count,
+                Struct(
+                    "unk_0" / Byte,
+                    "unk_1" / Byte,
+                    "notice_html" / PascalString(Int16ub, "ansi")
+                )
+            ),
+            "unk_36C8" / Int32ub,
+            "unk_flags" / Int32ub,
+            "unk_data_blob" / PascalString(Int16ub, "ansi"),
+
+            "unk_key_str_type" / Int16ub,
+            "unk_key_str_id" / If(this.unk_key_str_type == 0xCA10, Int16ub),
+            "unk_key_str_0" / If(this.unk_key_str_id == 20000, PascalString(Int16ub, "utf8")),
+            "unk_key_str_1" / If(this.unk_key_str_id == 20002 and this.unk_flags & 0x1000000, PascalString(Int16ub, "utf8")),
+
+            "unk_25E4_count" / Byte,
+            "unk_25E4" / Array(this.unk_25E4_count,
+                Struct(
+                    "unk_0" / Byte,
+                    "unk_1" / Int32ub,
                     "unk_2" / PascalString(Byte, "ansi")
                 )
             ),
-            "unk_count_1" / Byte,
-            "unk_substruct" / If(this.unk_count_1 == 0,
+            # Stop if EOF.
+
+
+            "unk_str_type" / Int16ub,
+            "unk_str_id_0" / If(this.unk_str_type == 0xCA11, Int16ub),
+            "unk_str_id_1" / If(this.unk_str_id_0 == 1, Int16ub),
+            "unk_server_ip" / If(this.unk_str_id_1 == 20000, PascalString(Int16ub, "utf8")),
+            # Stop if EOF.
+
+            "unk_488" / Int32ub,
+            "unk_490" / Int32ub,
+            # Stop if EOF.
+
+
+            "unk_3668" / Int32ub,
+            "unk_3670" / Int32ub,
+            "unk_3678" / Int32ub,
+            "unk_3680_count" / Byte,
+            "unk_3680" / Array(this.unk_3680_count,
                 Struct(
-                    "unk_25A0" / Byte,
-                    # Alot more here.
+                    "unk_0" / Int32ub,
                 )
             ),
 
-            "unk_count_extended_1" / If(this.unk_count_1 == 255, Int16ul),
-            "unk_objs_1" / Array(this.unk_count_1 if this.unk_count_1 < 255 else this.unk_count_extended_1,
+            "unk_3688_count" / Byte,
+            "unk_3688" / Array(this.unk_3688_count,
                 Struct(
-                    "unk_0" / Int32ul,
-                    "unk_1" / Int32ul,
-                    "unk_2" / PascalString(Byte, "ansi")
+                    "unk_0" / Byte,
                 )
             ),
 
-
+            # Maybe still more?
             ),
-        17: Struct(),
+        17: Struct(), # Region blocked.
     }
 )
 
@@ -165,7 +213,9 @@ if __name__ == '__main__':
     elif len(sys.argv) >= 3 and sys.argv[1] == 'construct_test':
         with open(sys.argv[2], 'rb') as f:
             data = f.read()
-            print(SignInResp.parse(data))
+            obj = SignInResp.parse(data)
+
+            print(obj)
 
     elif len(sys.argv) >= 2 and sys.argv[1] == 'channel_test': # Grab JP channel listing and decrypt:
         
