@@ -14,4 +14,4 @@ Options:
 
 
 ## File download example
-`py -3 fake_client.py <ID> <PASSWORD> 56162d0`
+`py -3 fake_client.py download_file <ID> <PASSWORD> 56162d0`
