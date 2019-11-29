@@ -68,7 +68,12 @@ class PacketStreamContext(object):
     def read_packet(self, bruteforce_encryption=False):
         # Read the header.
         header = PacketHeader()
-        header.parse_from(self._ds.read(PacketHeader.SIZE))
+        phd = self._ds.read(PacketHeader.SIZE)
+        header.parse_from(phd)
+
+        print("Got header:")
+        from hexdump import hexdump
+        hexdump(phd)
 
         # Update the rolling key index.
         if header.key_rot_delta != 0:
@@ -91,7 +96,10 @@ class PacketStreamContext(object):
             if not matchFound:
                 raise Exception("Could not bruteforce the packet!")
 
-        return Packet(header, output_data)
+        if check0 == header.check0 and check1 == header.check1 and check2 == header.check2:
+            return Packet(header, output_data)
+        else:
+            raise Exception("Packet checksums are invalid!")
 
     # Encrypts the data, makes the header, and returns the completed raw packet.
     def _make_raw_packet(self, data, pkt_num, prev_packet_combined_check, key_rot_delta=None):
