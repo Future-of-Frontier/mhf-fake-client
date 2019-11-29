@@ -17,8 +17,5 @@ class SocketFileWrapper(object):
         return readnbyte(self.s, n)
 
     def write(self, data):
-        from hexdump import hexdump
-        print("Writing:")
-        hexdump(data)
         return self.s.sendall(data)
 

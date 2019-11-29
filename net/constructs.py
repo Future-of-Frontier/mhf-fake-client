@@ -21,7 +21,7 @@ SignInResp = EmbeddedSwitch(
             "unk_hostname_count" / Byte,
             "entrance_server_count" / Byte,
             "character_count" / Byte,
-            "unk_0" / Int32ub,
+            "login_token_number" / Int32ub,
             "login_token" / PaddedString(16, "utf8"),
             # "unk_3B74" / If(False, PascalString(Byte, "utf8")), # Unknown condition.
             "unk_3AE8" / Int32ub,
@@ -176,8 +176,14 @@ Binary8Header = Struct(
 MsgSysPing = Struct(
     "opcode" / Int16ub,
     "ack_handle" / Int32ub,
-    "unk_0" / Default(Int16ub, 0x11),
-    "unk_1" / Default(Int16ub, 0x10),
+)
+
+MsgSysAck = Struct(
+    "opcode" / Int16ub,
+    "ack_handle" / Int32ub,
+    "unk" / Int16ub,
+    "response_size" / Int16ub,
+    "response_data" / Bytes(this.response_size),
 )
 
 MsgSysLoginRequest = Struct(
@@ -191,6 +197,19 @@ MsgSysLoginRequest = Struct(
     "hardcoded_2" / Default(Int16ub, 0x0), # Hardcoded 0x00 0x00
     "hardcoded_3" / Default(Int16ub, 0x11), # Hardcoded 0x00 0x11 -- login token length.
     "login_token" / PaddedString(17, "utf8"),
-    "unk_t0" / Default(Int16ub, 0x11),
-    "unk_t1" / Default(Int16ub, 0x10),
 )
+
+MsgSysGetFile = Struct(
+    "opcode" / Int16ub, # MSG_SYS_GET_FILE
+    "ack_handle" / Int32ub,
+    "is_scenario_file" / Byte,
+    "filename_len" / Byte,
+    "filename" / Bytes(this.filename_len-1),
+    "scenario_identifer" / Default(If(this.is_scenario_file == 1, Struct(
+        "unk_0" / Byte,
+        "unk_1" / Int32ub,
+        "unk_2" / Byte,
+        "unk_3" / Byte,
+    )), None),
+)
+

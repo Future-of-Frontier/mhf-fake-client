@@ -68,12 +68,7 @@ class PacketStreamContext(object):
     def read_packet(self, bruteforce_encryption=False):
         # Read the header.
         header = PacketHeader()
-        phd = self._ds.read(PacketHeader.SIZE)
-        header.parse_from(phd)
-
-        print("Got header:")
-        from hexdump import hexdump
-        hexdump(phd)
+        header.parse_from(self._ds.read(PacketHeader.SIZE))
 
         # Update the rolling key index.
         if header.key_rot_delta != 0:

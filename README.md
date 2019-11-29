@@ -1,16 +1,17 @@
 # mhf-fake-client
 A proof-of-concept CLI fake client for MHF.
 
+## Usage
 Run with:
 ```
-py -3 fake_client.py cog <ID> <PASSWORD>
+py -3 fake_client.py <OPTION>
 ```
 
-To login via the COG jp web api, sign server (using the previous skey), and get the and parse the world/channel list from the entrance server.
+Options:
+* `bruteforce <ENCRYPTED PACKET FILEPATH>` Bruteforce decrypt an encrypted packet
+* `download_file <ID> <PASSWORD> <FILENAME>` Log into MHF JP and download the given filename.
+* `channel_test` Print the JP channel list. (Unauthenticated)
 
-Or simply:
-```
-py -3 fake_client.py channel_test
-```
 
-To print the JP channel list. (Unauthenticated)
+## File download example
+`py -3 fake_client.py <ID> <PASSWORD> 56162d0`
