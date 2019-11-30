@@ -173,6 +173,11 @@ Binary8Header = Struct(
 ########     Entrance server END  ########
 ##########################################
 
+MsgHeader = Struct(
+    "opcode" / Int16ub,
+    "ack_handle" / Int32ub,
+) 
+
 MsgSysPing = Struct(
     "opcode" / Int16ub,
     "ack_handle" / Int32ub,
