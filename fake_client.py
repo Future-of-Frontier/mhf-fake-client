@@ -47,15 +47,15 @@ def do_ping(ps):
 
 
 # Sends a MSG_SYS_LOGIN and reads the response off the stream.
-def do_login(ps, login_token, login_token_number):
+def do_login(ps, login_token, login_token_number, character_id):
     # Build the login packet data.
     handle = get_ack_handle()
     body = MsgSysLoginRequest.build(dict(
         opcode=PacketID.MSG_SYS_LOGIN,
         ack_handle=handle,
-        unk_0=0x23B606F3,
+        unk_0=character_id,
         unk_1=login_token_number,
-        unk_2=0x23B606F3,
+        unk_2=character_id,
         login_token=login_token,
     ))
 
@@ -81,7 +81,7 @@ def do_get_file(ps, filename):
     # Read and verify the ACK handle.
     return read_until_expected_ack(ps, handle)
 
-def connect_to_game_server_and_download_file(host, port, login_token, login_token_number, filename):
+def connect_to_game_server_and_download_file(host, port, login_token, login_token_number, character_id, filename):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.connect((host, port))
 
@@ -91,7 +91,7 @@ def connect_to_game_server_and_download_file(host, port, login_token, login_toke
     do_ping(ps)
 
     # Do the login.
-    do_login(ps, login_token, login_token_number)
+    do_login(ps, login_token, login_token_number, character_id)
 
     # HACK -- if the filename passed is "_ALL_", bruteforce all combos.
     if filename == '_ALL_':
@@ -172,7 +172,9 @@ def cmd_download_file(username, password, filename):
     print("Connecting to game server {}:{}, \"{}\"".format(game_host, game_port, server.name.decode('shift_jis')))
 
     # Finally connect to the ingame server, login, and download the file.
-    connect_to_game_server_and_download_file(game_host, game_port, signin_resp.login_token, signin_resp.login_token_number, filename)
+    character_id = signin_resp.characters[0].character_id
+    print("Chosen character ID: {}".format(character_id))
+    connect_to_game_server_and_download_file(game_host, game_port, signin_resp.login_token, signin_resp.login_token_number, character_id, filename)
 
 if __name__ == '__main__':
     if len(sys.argv) >= 3 and sys.argv[1] == 'bruteforce':
@@ -185,7 +187,7 @@ if __name__ == '__main__':
         username = sys.argv[2]
         password = sys.argv[3]
         filename = sys.argv[4]
-        if len(sys.argv) >= 5:
+        if len(sys.argv) >= 6:
             last_bruteforce_index = int(sys.argv[5])
 
         # If we are downloading all of them, download until completion,
