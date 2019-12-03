@@ -209,7 +209,7 @@ MsgSysGetFile = Struct(
     "ack_handle" / Int32ub,
     "is_scenario_file" / Byte,
     "filename_len" / Byte,
-    "filename" / Bytes(this.filename_len-1),
+    "filename" / If(this.filename_len > 0, Bytes(this.filename_len-1)),
     "scenario_identifer" / Default(If(this.is_scenario_file == 1, Struct(
         "unk_0" / Byte,
         "unk_1" / Int32ub,
