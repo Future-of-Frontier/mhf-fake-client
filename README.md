@@ -10,6 +10,8 @@ py -3 fake_client.py <OPTION>
 Options:
 * `bruteforce <ENCRYPTED PACKET FILEPATH>` Bruteforce decrypt an encrypted packet
 * `download_file <ID> <PASSWORD> <FILENAME>` Log into MHF JP and download the given filename.
+* `download_file <ID> <PASSWORD> _ALL_ [<quest start id>]`
+* `download_scenarios <ID> <PASSWORD> `
 * `channel_test` Print the JP channel list. (Unauthenticated)
 
 

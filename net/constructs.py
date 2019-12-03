@@ -29,7 +29,7 @@ SignInResp = EmbeddedSwitch(
             "entrance_servers" / Array(this.entrance_server_count, PascalString(Byte, "utf8")),
             "characters" / Array(this.character_count,
                 Struct(
-                    "unk_0" / Int32ub,
+                    "character_id" / Int32ub,
                     "unk_1" / Int16ub,
                     "unk_2" / Int16ub,
                     "unk_3" / Int32ub,
@@ -73,7 +73,7 @@ SignInResp = EmbeddedSwitch(
                     "notice_html" / PascalString(Int16ub, "ansi")
                 )
             ),
-            "unk_36C8" / Int32ub,
+            "some_last_played_character_id" / Int32ub,
             "unk_flags" / Int32ub,
             "unk_data_blob" / PascalString(Int16ub, "ansi"),
 
@@ -173,6 +173,11 @@ Binary8Header = Struct(
 ########     Entrance server END  ########
 ##########################################
 
+MsgHeader = Struct(
+    "opcode" / Int16ub,
+    "ack_handle" / Int32ub,
+) 
+
 MsgSysPing = Struct(
     "opcode" / Int16ub,
     "ack_handle" / Int32ub,
@@ -204,7 +209,7 @@ MsgSysGetFile = Struct(
     "ack_handle" / Int32ub,
     "is_scenario_file" / Byte,
     "filename_len" / Byte,
-    "filename" / Bytes(this.filename_len-1),
+    "filename" / If(this.filename_len > 0, Bytes(this.filename_len-1)),
     "scenario_identifer" / Default(If(this.is_scenario_file == 1, Struct(
         "unk_0" / Byte,
         "unk_1" / Int32ub,
