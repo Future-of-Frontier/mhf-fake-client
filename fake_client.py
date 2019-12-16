@@ -6,15 +6,13 @@ import os
 import json
 import time
 import zlib
+import argparse
 from net import *
-from jp import *
+from region import *
 
 from hexdump import hexdump
 
-last_quest_bruteforce_index = 0
-start_scenario_category_id = 0
-start_scenario_main_id = 0
-start_scenario_u2 = 0
+download_start_offset = 0
 
 # Helper function to make sequential ACK handle values for packets.
 cur_ack_handle = 0x01FF0000
@@ -51,15 +49,16 @@ def do_ping(ps):
 
 
 # Sends a MSG_SYS_LOGIN and reads the response off the stream.
-def do_login(ps, login_token, login_token_number, character_id):
+def do_login(ps, req_version, login_token, login_token_number, character_id):
     # Build the login packet data.
     handle = get_ack_handle()
     body = MsgSysLoginRequest.build(dict(
         opcode=PacketID.MSG_SYS_LOGIN,
         ack_handle=handle,
-        unk_0=character_id,
-        unk_1=login_token_number,
-        unk_2=character_id,
+        char_id_0=character_id,
+        login_token_number=login_token_number,
+        hardcoded_req_version=req_version,
+        char_id_1=character_id,
         login_token=login_token,
     ))
 
@@ -108,20 +107,20 @@ def do_get_file_scenario(ps, u0, u1, u2, u3):
     return read_until_expected_ack(ps, handle)
 
 
-#ps.make_and_send_packet(bytearray(b'\x00\xA0\x01\xFF\x00\x02\x00\x08\x00\x04\x00\x52\x00\x00\x10')) # Enum quest
-#ps.make_and_send_packet(bytearray(b'\x00\x1C\x01\xFF\x00\x02\x00\x08\x35\x36\x31\x36\x32\x64\x30')) # GetFile
-
-
 # Do a complete login process and return a PacketStreamContext for sending/receiving ingame packets.
 # (launcher login -> sign server login -> entrance server -> game server)
-def get_working_ingame_session(username, password):
-    # Do the launcher login
-    skey = cog_jp_login(username, password)
-    print("Got SKEY: {}".format(skey))
+def get_working_ingame_session(username, password, region_str):
+    skey = None
+    if region_str == 'jp':
+        region = RegionJP()
+        skey = region.cog_jp_login(username, password)
+        print("Got SKEY: {}".format(skey))
+    elif region_str == 'tw':
+        region = RegionTW()
 
     # Do the client "signin"
-    (sign_host, sign_port) = cog_jp_serverlist_get_first()
-    signin_resp = cog_jp_signin(sign_host, int(sign_port), username, skey)
+    (sign_host, sign_port) = region.serverlist_get_first()
+    signin_resp = region.signin(sign_host, int(sign_port), username, skey or password)
     if signin_resp.resp_code == 23:
         print("Region blocked at sign server.")
         sys.exit(1)
@@ -134,15 +133,35 @@ def get_working_ingame_session(username, password):
     print("Getting servers from entrance server: {}:{}".format(entrance_host, entrance_port))
 
     # Read the server list.
-    (server_list, entrance_ps) = cog_jp_read_entrance_server_list(entrance_host, int(entrance_port))
+    (server_list, entrance_ps) = read_entrance_server_list(entrance_host, int(entrance_port))
 
+    
     # Just choose the first server and first channel for simplicity.
     (server, channels) = server_list[0]
     channel = channels[0]
+    
+    
+    """
+    # Can't get into some servers?
+    for (server, channels) in server_list:
+        if region_str == 'jp':
+            server_name = server.name.decode('shift_jis')
+        elif region_str == 'tw':
+            server_name = server.name.decode('big5')
+        print(server_name)
+
+
+        if '棘龍' in server_name or 'ビギニング' in server_name:
+            print("Found server")
+            server = server
+            channel = channels[0]
+
+            break
+    """
 
     game_host = ip_string_from_uint32(server.host_ip_4byte)
     game_port = channel.port
-    print("Connecting to game server {}:{}, \"{}\"".format(game_host, game_port, server.name.decode('shift_jis')))
+    print("Connecting to game server {}:{}".format(game_host, game_port))
 
     # Finally connect to the ingame server, login, and download the file.
     character_id = signin_resp.characters[0].character_id
@@ -156,13 +175,14 @@ def get_working_ingame_session(username, password):
 
     # Do a ping first, then login
     do_ping(ps)
-    do_login(ps, signin_resp.login_token, signin_resp.login_token_number, character_id)
+    do_login(ps, region.msg_sys_login_request_version, signin_resp.login_token, signin_resp.login_token_number, character_id)
+    print("Logged in?")
 
     return (sock, ps)
 
 
-def cmd_download_file(username, password, filename):
-    (sock, ps) = get_working_ingame_session(username, password)
+def cmd_download_file(username, password, region, filename):
+    (sock, ps) = get_working_ingame_session(username, password, region)
     
     # HACK -- if the filename passed is "_ALL_", bruteforce all combos.
     if filename == '_ALL_':
@@ -172,8 +192,8 @@ def cmd_download_file(username, password, filename):
         except:
             pass
 
-        global last_quest_bruteforce_index
-        for i in range(last_quest_bruteforce_index, 99999+1):
+        global download_start_offset
+        for i in range(download_start_offset, 99999+1):
             print('\n\n')
             print('i is {}'.format(i))
             start = time.time()
@@ -197,7 +217,7 @@ def cmd_download_file(username, password, filename):
 
             end = time.time()
             print("Took {} seconds".format(end-start))
-            last_quest_bruteforce_index += 1
+            download_start_offset += 1
     else:
         # Download the file normally.
         get_file_resp = do_get_file(ps, filename)
@@ -207,12 +227,8 @@ def cmd_download_file(username, password, filename):
 
         print("Downloaded {} as {}".format(filename, output_filename))
 
-def cmd_download_scenarios(username, password):
-    global start_scenario_category_id
-    global start_scenario_main_id
-    global start_scenario_u2
-
-    (sock, ps) = get_working_ingame_session(username, password)
+def cmd_download_scenarios(username, password, region):
+    (sock, ps) = get_working_ingame_session(username, password, region)
 
     scenario_folder = 'download_scenario'
     try:
@@ -220,9 +236,10 @@ def cmd_download_scenarios(username, password):
     except:
         pass
 
-    for category_id in range(start_scenario_category_id, 256): # Ran the full 256 multiple times, nothing beyond 7.
+    global download_start_offset
+    for category_id in range(download_start_offset, 8): # Ran the full 256 multiple times, nothing beyond 7.
         # No hard limit on the main ID, just go until it stops returning data for the next index.
-        for main_id in range(start_scenario_main_id, 999999999):
+        for main_id in range(0, 999999999):
             print("Checking {}_{}_0_1".format(category_id, main_id))
             
             # Check if the category_id and main_id are valid by getting it with the known-good u2=0, flags=1 values.
@@ -233,7 +250,7 @@ def cmd_download_scenarios(username, password):
                 print("{}_{}_0_1 is valid, now iterating u2 values.".format(category_id, main_id))
 
             last_wrote_u2_response_data_crc32 = 0
-            for u2 in range(start_scenario_u2, 256):
+            for u2 in range(0, 256):
                 flags = 0xFF
                 name = "{}_{}_{}_{}".format(category_id, main_id, u2, flags)
                 print("\tTrying {}".format(name))
@@ -255,25 +272,50 @@ def cmd_download_scenarios(username, password):
                     last_wrote_u2_response_data_crc32 = this_crc32
 
 if __name__ == '__main__':
-    if len(sys.argv) >= 3 and sys.argv[1] == 'bruteforce':
-        with open(sys.argv[2], 'rb') as f:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("command",
+        choices=['bruteforce', 'download_file', 'download_scenarios'],
+        help="Command to execute",
+    )
+
+    parser.add_argument('--username', help="Game username/id for login")
+    parser.add_argument('--password', help="Game password for login")
+    parser.add_argument('--region', choices=['jp', 'tw'])
+
+    parser.add_argument('--filename', help="Filename to use for the `bruteforce` and `download_file` commands")
+    parser.add_argument('--start_offset', help="Starting offset to use for the `download_file` and `download_scenarios` commands")
+
+    args = parser.parse_args()
+    #print(args.echo)
+
+    def require_arg(args, arg):
+        if getattr(args, arg) == None:
+            print("--{} argument required for this command".format(arg))
+            sys.exit(1)
+
+    if args.start_offset != None:
+        download_start_offset = int(args.start_offset)
+
+    if args.command == 'bruteforce':
+        require_arg(args, 'filename')
+        with open(args.filename, 'rb') as f:
             ps = PacketStreamContext(f)
             pkt = ps.read_packet(bruteforce_encryption=True)
             print('Bruteforced output:')
             hexdump(pkt.data)
-    elif len(sys.argv) >= 5 and sys.argv[1] == 'download_file':
-        username = sys.argv[2]
-        password = sys.argv[3]
-        filename = sys.argv[4]
-        if len(sys.argv) >= 6:
-            last_quest_bruteforce_index = int(sys.argv[5])
+
+    elif args.command == 'download_file':
+        require_arg(args, 'username')
+        require_arg(args, 'password')
+        require_arg(args, 'region')
+        require_arg(args, 'filename')
 
         # If we are downloading all of them, download until completion,
         # restarting from the last saved position if an exception occurs.
-        if sys.argv[4] == '_ALL_':
+        if args.filename == '_ALL_':
             while True:
                 try:
-                    cmd_download_file(username, password, filename)
+                    cmd_download_file(args.username, args.password, args.region, args.filename)
                 except Exception as e:
                     print(e)
                     continue
@@ -281,24 +323,11 @@ if __name__ == '__main__':
                 break
         else:
             # Otherwise download the single file, don't care about exceptions.
-            cmd_download_file(username, password, filename)
+            cmd_download_file(args.username, args.password, args.region, args.filename)
 
+    elif args.command == 'download_scenarios':
+        require_arg(args, 'username')
+        require_arg(args, 'password')
+        require_arg(args, 'region')
+        cmd_download_scenarios(args.username, args.password, args.region)
     
-    elif len(sys.argv) >= 4 and sys.argv[1] == 'download_scenarios':
-        username = sys.argv[2]
-        password = sys.argv[3]
-        if len(sys.argv) >= 7:
-            start_scenario_category_id = int(sys.argv[4])
-            start_scenario_main_id = int(sys.argv[5])
-            start_scenario_u2 = int(sys.argv[6])
-
-        cmd_download_scenarios(username, password)
-
-    elif len(sys.argv) >= 2 and sys.argv[1] == 'channel_test': # Grab JP channel listing and decrypt:
-        # This doesn't require any authentication....
-        server_list = cog_jp_read_entrance_server_list('106.185.74.61', 53310) # Should be gotten from the SignInResp.
-        for (server, channels) in server_list:
-            print(ip_string_from_uint32(server.host_ip_4byte))
-            print(server.name.decode('shift_jis'))
-    else:
-        print("Invalid option argument.")

@@ -194,11 +194,11 @@ MsgSysAck = Struct(
 MsgSysLoginRequest = Struct(
     "opcode" / Int16ub,
     "ack_handle" / Int32ub,
-    "unk_0" / Int32ub,
-    "unk_1" / Int32ub,
+    "char_id_0" / Int32ub,
+    "login_token_number" / Int32ub,
     "hardcoded_0" / Default(Int16ub, 0), # Hardcoded 0x00 0x00
-    "hardcoded_1" / Default(Int16ub, 0xB), # Hardcoded 0x00 0x0B
-    "unk_2" / Int32ub, # Same value as unk_0
+    "hardcoded_req_version" / Int16ub, # Hardcoded 0x00 0x0B(JP), or 0x00 0x09(TW)
+    "char_id_1" / Int32ub, # Same value as char_id_0
     "hardcoded_2" / Default(Int16ub, 0x0), # Hardcoded 0x00 0x00
     "hardcoded_3" / Default(Int16ub, 0x11), # Hardcoded 0x00 0x11 -- login token length.
     "login_token" / PaddedString(17, "utf8"),

@@ -92,7 +92,8 @@ class PacketStreamContext(object):
                 raise Exception("Could not bruteforce the packet!")
 
         if check0 == header.check0 and check1 == header.check1 and check2 == header.check2:
-            return Packet(header, output_data)
+            pkt = Packet(header, output_data)
+            return pkt
         else:
             raise Exception("Packet checksums are invalid!")
 

@@ -78,29 +78,3 @@ class PacketCrypto(object):
         check_2 = (accumulator_2 ^ ((accumulator_2&0xFFFF0000)>>16)) & 0xFFFF
 
         return (output_data, combined_check, check_0, check_1, check_2)
-
-
-DECODE_BINARY8_KEY = bytes([0x01, 0x23, 0x34, 0x45, 0x56, 0xAB, 0xCD, 0xEF])
-def decode_binary8(data, unk_key_byte):
-    cur_key = ((54323 * unk_key_byte) + 1) & 0xFFFFFFFF
-
-    output_data = bytearray()
-    for i in range(len(data)):
-        tmp = (data[i] ^ (cur_key >> 13)) & 0xFF
-        output_data.append(tmp ^ DECODE_BINARY8_KEY[i&7])
-        cur_key = ((54323 * cur_key) + 1) & 0xFFFFFFFF
-
-    return output_data
-
-def read_binary8_part(stream):
-    # Read the header and decrypt the header first to get the size.
-    enc_bytes = bytearray(stream.read(12))
-    dec_header_bytes = decode_binary8(enc_bytes[1:], enc_bytes[0])
-    header = Binary8Header.parse(dec_header_bytes)
-
-    # Then read the body, append to the header, and decrypt the full thing.
-    enc_bytes.extend(stream.read(header.body_size))
-    dec_bytes = decode_binary8(enc_bytes[1:], enc_bytes[0])
-
-    # Then return the parsed header and just the raw body data.
-    return (header, dec_bytes[11:])
